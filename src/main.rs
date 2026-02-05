@@ -9,7 +9,11 @@ fn find_common_byte_pair(text: &str, index: u8) -> ((char, char), String) {
 
     for window in chars.windows(2) {
         let pair = (window[0], window[1]);
-        if pair.0.is_ascii_alphabetic() && pair.1.is_ascii_alphabetic() {
+        if !(pair.0.is_whitespace()
+            || pair.0.is_ascii_punctuation()
+            || pair.1.is_whitespace()
+            || pair.1.is_ascii_punctuation())
+        {
             *pairs.entry(pair).or_insert(0) += 1;
         }
     }
@@ -180,7 +184,7 @@ fn optimal(txt: String) {
 }
 
 static TIMES: i16 = 150; // Number of iterations (-1 for optimal)
-static TEXT: &str = "lorem.txt";
+static TEXT: &str = "alice.txt";
 
 fn main() {
     let mut file = fs::File::open(TEXT).expect("Unable to open file");
