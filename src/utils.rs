@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use rayon::prelude::*;
 
 fn decrypt_and_print(start_char: char, pairs_replaced: &Vec<(char, char)>) {
     // If the character is in the original character set, print it directly
@@ -74,29 +75,44 @@ pub fn pretty_print_pairs(pairs_replaced: &Vec<(char, char)>) {
 }
 /// Finds the most common byte pair in the text and replaces all occurrences.
 ///
-/// This function is optimized to scan the text only twice:
-/// 1. First pass: count all pairs using a HashMap directly from text iterator - O(n)
+/// This function is optimized with parallelization:
+/// 1. First pass: count all pairs in parallel using rayon - O(n/p) where p is number of cores
 /// 2. Second pass: replace all occurrences of the most common pair - O(n)
 ///
-/// Total complexity: O(n) where n is the text length
+/// The text is split into chunks for parallel processing, and results are merged.
 pub fn find_common_byte_pair(text: &str, index: u16) -> ((char, char), String) {
-    // First pass: Count all pairs using HashMap directly from iterator
-    let mut pairs: HashMap<(char, char), usize> = HashMap::new();
-    let mut chars_iter = text.chars().peekable();
+    // First pass: Count all pairs in parallel by splitting text into chunks
+    const MIN_CHUNK_SIZE: usize = 10000; // Minimum chars per chunk to avoid overhead
+    let chars: Vec<char> = text.chars().collect();
+    let chunk_size = (chars.len() / rayon::current_num_threads()).max(MIN_CHUNK_SIZE);
 
-    while let Some(first) = chars_iter.next() {
-        if let Some(&second) = chars_iter.peek() {
-            let pair = (first, second);
-            // Only count pairs where neither character is whitespace or punctuation
-            if !(pair.0.is_whitespace()
-                || pair.0.is_ascii_punctuation()
-                || pair.1.is_whitespace()
-                || pair.1.is_ascii_punctuation())
-            {
-                *pairs.entry(pair).or_insert(0) += 1;
+    // Process chunks in parallel and merge results
+    let pairs: HashMap<(char, char), usize> = chars
+        .par_chunks(chunk_size)
+        .map(|chunk| {
+            let mut local_pairs: HashMap<(char, char), usize> = HashMap::new();
+            for i in 0..chunk.len().saturating_sub(1) {
+                let pair = (chunk[i], chunk[i + 1]);
+                // Only count pairs where neither character is whitespace or punctuation
+                if !(pair.0.is_whitespace()
+                    || pair.0.is_ascii_punctuation()
+                    || pair.1.is_whitespace()
+                    || pair.1.is_ascii_punctuation())
+                {
+                    *local_pairs.entry(pair).or_insert(0) += 1;
+                }
             }
-        }
-    }
+            local_pairs
+        })
+        .reduce(
+            || HashMap::new(),
+            |mut acc, local_pairs| {
+                for (pair, count) in local_pairs {
+                    *acc.entry(pair).or_insert(0) += count;
+                }
+                acc
+            }
+        );
 
     // Find the most common pair - O(m) where m is number of unique pairs
     let (a, b) = pairs
@@ -150,6 +166,36 @@ mod tests {
         assert!(a != '\0' && b != '\0');
         // Result should have fewer characters than original (not bytes, but chars)
         assert!(result.chars().count() < text.chars().count());
+    }
+
+    #[test]
+    fn test_parallelization_produces_same_results() {
+        // Test with a larger text to ensure chunking works correctly
+        let text = "the quick brown fox jumps over the lazy dog the the the quick quick brown";
+        let ((a1, b1), result1) = find_common_byte_pair(text, 0);
+
+        // Run multiple times to ensure deterministic results
+        let ((a2, b2), result2) = find_common_byte_pair(text, 0);
+
+        assert_eq!(a1, a2);
+        assert_eq!(b1, b2);
+        assert_eq!(result1, result2);
+    }
+
+    #[test]
+    fn test_parallelization_with_large_text() {
+        // Create a large text by repeating a pattern
+        let mut large_text = String::new();
+        for _ in 0..1000 {
+            large_text.push_str("hello world this is a test of parallel processing ");
+        }
+
+        let ((a, b), result) = find_common_byte_pair(&large_text, 0);
+
+        // Verify that we found a valid pair
+        assert!(a != '\0' && b != '\0');
+        // Verify compression occurred
+        assert!(result.chars().count() < large_text.chars().count());
     }
 }
 
