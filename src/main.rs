@@ -1,9 +1,10 @@
+use kdam::tqdm;
 mod text_utils;
 use std::collections::HashMap;
 use std::fs;
 use std::io::Read;
 
-fn find_common_byte_pair(text: &str, index: u8) -> ((char, char), String) {
+fn find_common_byte_pair(text: &str, index: u16) -> ((char, char), String) {
     let mut pairs: HashMap<(char, char), usize> = HashMap::new();
     let chars: Vec<char> = text.chars().collect();
 
@@ -48,7 +49,7 @@ fn compute_table_complexity(pairs_replaced: &Vec<(char, char)>) -> f64 {
     len * 2.0 * (30_f64 + len).log2() // 1 pair = 2 chars, each char is in the alphabet or " ", ",", ".", etc.
 }
 
-fn compute_text_complexity(text: &String, table_len: u8) -> f64 {
+fn compute_text_complexity(text: &String, table_len: u16) -> f64 {
     let len = text.chars().count() as f64;
     len * ((30 + table_len) as f64).log2()
 }
@@ -60,37 +61,23 @@ fn iterate(txt: String, times: u16) {
 
     let mut complexities: Vec<f64> = Vec::new();
 
-    for i in 0..times as usize {
-        let ((a, b), new_text) = find_common_byte_pair(&text, i as u8);
+    for i in tqdm!(0..times as usize) {
+        let ((a, b), new_text) = find_common_byte_pair(&text, i as u16);
         text = new_text;
         pairs_replaced.push((a, b));
-        println!("{}.{} => {}", a, b, i as u8);
-        let total_complexity =
-            compute_table_complexity(&pairs_replaced) + compute_text_complexity(&text, i as u8 + 1);
+        let total_complexity = compute_table_complexity(&pairs_replaced)
+            + compute_text_complexity(&text, i as u16 + 1);
         complexities.push(total_complexity);
     }
 
-    // Replace all non-latin characters with their ASCII code between backticks
-    // text = text
-    //     .chars()
-    //     .map(|c| {
-    //         if c.is_ascii_alphabetic() || c == ' ' || c == '.' || c == ',' || c == '\n' {
-    //             c.to_string()
-    //         } else {
-    //             format!("`{}`", c as u8)
-    //         }
-    //     })
-    //     .collect();
+    // for i in 0..complexities.len() {
+    //     println!(
+    //         "After {} replacements, total complexity = {}",
+    //         i + 1,
+    //         complexities[i].round()
+    //     );
+    // }
 
-    for i in 0..complexities.len() {
-        println!(
-            "After {} replacements, total complexity = {}",
-            i + 1,
-            complexities[i].round()
-        );
-    }
-
-    // println!("Final encoded text:\n{}", text);
     pretty_print_pairs(&pairs_replaced);
 }
 
@@ -139,16 +126,16 @@ fn optimal(txt: String) {
 
     let mut i = 0;
     loop {
-        let ((a, b), new_text) = find_common_byte_pair(&text, i as u8);
+        let ((a, b), new_text) = find_common_byte_pair(&text, i as u16);
         let mut temp_pairs_replaced = pairs_replaced.clone();
         temp_pairs_replaced.push((a, b));
         let total_complexity = compute_table_complexity(&temp_pairs_replaced)
-            + compute_text_complexity(&new_text, i as u8 + 1);
+            + compute_text_complexity(&new_text, i as u16 + 1);
 
         complexities.push(total_complexity);
 
         if total_complexity
-            >= compute_table_complexity(&pairs_replaced) + compute_text_complexity(&text, i as u8)
+            >= compute_table_complexity(&pairs_replaced) + compute_text_complexity(&text, i as u16)
         {
             break;
         }
@@ -158,18 +145,6 @@ fn optimal(txt: String) {
         i += 1;
     }
 
-    // Replace all non-latin characters with their ASCII code between backticks
-    // text = text
-    //     .chars()
-    //     .map(|c| {
-    //         if c.is_ascii_alphabetic() || c == ' ' || c == '.' || c == ',' || c == '\n' {
-    //             c.to_string()
-    //         } else {
-    //             format!("`{}`", c as u8)
-    //         }
-    //     })
-    //     .collect();
-
     for i in 0..complexities.len() {
         println!(
             "After {} replacements, total complexity = {}",
@@ -178,12 +153,10 @@ fn optimal(txt: String) {
         );
     }
 
-    // println!("Final encoded text:\n{}", text);
-
     pretty_print_pairs(&pairs_replaced)
 }
 
-static TIMES: i16 = 150; // Number of iterations (-1 for optimal)
+static TIMES: i16 = 300; // Number of iterations (-1 for optimal)
 static TEXT: &str = "alice.txt";
 
 fn main() {
