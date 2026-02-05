@@ -174,7 +174,7 @@ fn opti_search(txt: String, up_to_times: u16) {
     pretty_print_pairs(&best_pairs.to_vec());
 }
 
-static TIMES: i16 = 300; // Number of iterations (-1 for optimal)
+static TIMES: i16 = 500; // Number of iterations (-1 for optimal)
 static TEXT: &str = "alice.txt";
 
 fn main() {
