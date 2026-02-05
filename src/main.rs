@@ -70,14 +70,6 @@ fn iterate(txt: String, times: u16) {
         complexities.push(total_complexity);
     }
 
-    // for i in 0..complexities.len() {
-    //     println!(
-    //         "After {} replacements, total complexity = {}",
-    //         i + 1,
-    //         complexities[i].round()
-    //     );
-    // }
-
     pretty_print_pairs(&pairs_replaced);
 }
 
@@ -107,7 +99,7 @@ fn decrypt_and_print(start_char: char, pairs_replaced: &Vec<(char, char)>) {
 }
 
 fn pretty_print_pairs(pairs_replaced: &Vec<(char, char)>) {
-    println!("Replaced pairs:");
+    println!("{} replacements", pairs_replaced.len());
     pairs_replaced.iter().for_each(|(a, b)| {
         print!("`");
         decrypt_and_print(*a, pairs_replaced);
@@ -152,8 +144,34 @@ fn optimal(txt: String) {
             complexities[i].round()
         );
     }
-
     pretty_print_pairs(&pairs_replaced)
+}
+
+fn opti_search(txt: String, up_to_times: u16) {
+    let mut text = txt.clone();
+
+    let mut pairs_replaced: Vec<(char, char)> = Vec::new();
+
+    let mut complexities: Vec<f64> = Vec::new();
+
+    for i in tqdm!(0..up_to_times as usize) {
+        let ((a, b), new_text) = find_common_byte_pair(&text, i as u16);
+        text = new_text;
+        pairs_replaced.push((a, b));
+        let total_complexity = compute_table_complexity(&pairs_replaced)
+            + compute_text_complexity(&text, i as u16 + 1);
+        complexities.push(total_complexity);
+    }
+
+    let best_idx = complexities
+        .iter()
+        .enumerate()
+        .min_by_key(|&(_, complexity)| complexity.round() as i64)
+        .map(|(idx, _)| idx);
+
+    let end_range = best_idx.map(|i| i + 1).unwrap_or(0);
+    let best_pairs = &pairs_replaced[..end_range];
+    pretty_print_pairs(&best_pairs.to_vec());
 }
 
 static TIMES: i16 = 300; // Number of iterations (-1 for optimal)
@@ -167,7 +185,7 @@ fn main() {
 
     contents = text_utils::preprocess_text(&contents);
     if TIMES > 0 {
-        iterate(contents, TIMES as u16);
+        opti_search(contents, TIMES as u16);
     } else {
         optimal(contents);
     }
