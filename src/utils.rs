@@ -120,3 +120,33 @@ pub fn find_common_byte_pair(text: &str, index: u16) -> ((char, char), String) {
 
     ((a, b), result)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_preprocess_text_no_trim() {
+        let input = "Hello   World\n\n\nTest";
+        let result = preprocess_text(input);
+        assert_eq!(result, "hello   world\n\n\ntest");
+    }
+
+    #[test]
+    fn test_preprocess_text_with_trim() {
+        let input = "Hello   World\n\n\nTest";
+        let result = preprocess_text_with_options(input, true);
+        assert_eq!(result, "hello world\ntest");
+    }
+
+    #[test]
+    fn test_find_common_byte_pair() {
+        let text = "hello hello world";
+        let ((a, b), result) = find_common_byte_pair(text, 0);
+        // Should find "ll" or "he" as most common pair
+        assert!(a != '\0' && b != '\0');
+        // Result should have fewer characters than original (not bytes, but chars)
+        assert!(result.chars().count() < text.chars().count());
+    }
+}
+
