@@ -72,7 +72,15 @@ pub fn pretty_print_pairs(pairs_replaced: &Vec<(char, char)>) {
         println!()
     });
 }
+/// Finds the most common byte pair in the text and replaces all occurrences.
+///
+/// This function is optimized to scan the text only twice:
+/// 1. First pass: count all pairs using a HashMap - O(n)
+/// 2. Second pass: replace all occurrences of the most common pair - O(n)
+///
+/// Total complexity: O(n) where n is the text length
 pub fn find_common_byte_pair(text: &str, index: u16) -> ((char, char), String) {
+    // First pass: Count all pairs using HashMap
     let mut pairs: HashMap<(char, char), usize> = HashMap::new();
     let chars: Vec<char> = text.chars().collect();
 
@@ -87,6 +95,7 @@ pub fn find_common_byte_pair(text: &str, index: u16) -> ((char, char), String) {
         }
     }
 
+    // Find the most common pair - O(m) where m is number of unique pairs
     let (a, b) = pairs
         .into_iter()
         .max_by_key(|&(_, count)| count)
@@ -96,7 +105,7 @@ pub fn find_common_byte_pair(text: &str, index: u16) -> ((char, char), String) {
     // Create replacement character that won't conflict with original text
     let replacement = char::from_u32(128 + index as u32).unwrap(); // Use extended ASCII range to avoid conflicts
 
-    // More efficient replacement by iterating through characters
+    // Second pass: Replace all occurrences of the most common pair
     let mut result = String::new();
     let mut chars = text.chars().peekable();
 
