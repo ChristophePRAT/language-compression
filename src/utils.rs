@@ -26,7 +26,32 @@ fn decrypt_and_print(start_char: char, pairs_replaced: &Vec<(char, char)>) {
 }
 
 pub fn preprocess_text(text: &str) -> String {
-    text.to_lowercase().chars().collect()
+    preprocess_text_with_options(text, false)
+}
+
+pub fn preprocess_text_with_options(text: &str, trim_whitespace: bool) -> String {
+    let lowercased = text.to_lowercase();
+
+    if trim_whitespace {
+        // Trim consecutive whitespace characters to single instances
+        let mut result = String::new();
+        let mut prev_was_whitespace = false;
+
+        for c in lowercased.chars() {
+            if c.is_whitespace() {
+                if !prev_was_whitespace {
+                    result.push(c);
+                    prev_was_whitespace = true;
+                }
+            } else {
+                result.push(c);
+                prev_was_whitespace = false;
+            }
+        }
+        result
+    } else {
+        lowercased.chars().collect()
+    }
 }
 pub fn compute_table_complexity(pairs_replaced: &Vec<(char, char)>) -> f64 {
     let len = pairs_replaced.len() as f64;
