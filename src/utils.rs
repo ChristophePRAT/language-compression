@@ -75,23 +75,26 @@ pub fn pretty_print_pairs(pairs_replaced: &Vec<(char, char)>) {
 /// Finds the most common byte pair in the text and replaces all occurrences.
 ///
 /// This function is optimized to scan the text only twice:
-/// 1. First pass: count all pairs using a HashMap - O(n)
+/// 1. First pass: count all pairs using a HashMap directly from text iterator - O(n)
 /// 2. Second pass: replace all occurrences of the most common pair - O(n)
 ///
 /// Total complexity: O(n) where n is the text length
 pub fn find_common_byte_pair(text: &str, index: u16) -> ((char, char), String) {
-    // First pass: Count all pairs using HashMap
+    // First pass: Count all pairs using HashMap directly from iterator
     let mut pairs: HashMap<(char, char), usize> = HashMap::new();
-    let chars: Vec<char> = text.chars().collect();
+    let mut chars_iter = text.chars().peekable();
 
-    for window in chars.windows(2) {
-        let pair = (window[0], window[1]);
-        if !(pair.0.is_whitespace()
-            || pair.0.is_ascii_punctuation()
-            || pair.1.is_whitespace()
-            || pair.1.is_ascii_punctuation())
-        {
-            *pairs.entry(pair).or_insert(0) += 1;
+    while let Some(first) = chars_iter.next() {
+        if let Some(&second) = chars_iter.peek() {
+            let pair = (first, second);
+            // Only count pairs where neither character is whitespace or punctuation
+            if !(pair.0.is_whitespace()
+                || pair.0.is_ascii_punctuation()
+                || pair.1.is_whitespace()
+                || pair.1.is_ascii_punctuation())
+            {
+                *pairs.entry(pair).or_insert(0) += 1;
+            }
         }
     }
 
