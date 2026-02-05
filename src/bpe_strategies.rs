@@ -51,9 +51,10 @@ pub fn optimal(txt: String) {
 
     for i in 0..complexities.len() {
         println!(
-            "After {} replacements, total complexity = {}",
+            "After {} replacements, compression rate = {}%",
             i + 1,
-            complexities[i].round()
+            (100_f64 * complexities[i].round() / (utils::compute_text_complexity(&txt, 0) as f64))
+                as i64
         );
     }
     utils::pretty_print_pairs(&pairs_replaced)
@@ -84,4 +85,10 @@ pub fn opti_search(txt: String, up_to_times: u16) {
     let end_range = best_idx.map(|i| i + 1).unwrap_or(0);
     let best_pairs = &pairs_replaced[..end_range];
     utils::pretty_print_pairs(&best_pairs.to_vec());
+
+    println!(
+        "Compression rate: {}%",
+        (100_f64 * complexities[end_range].round()
+            / (utils::compute_text_complexity(&txt, 0) as f64)) as i64
+    );
 }
